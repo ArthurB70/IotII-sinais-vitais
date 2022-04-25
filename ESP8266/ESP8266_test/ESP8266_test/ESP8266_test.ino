@@ -13,7 +13,7 @@ void setup()
   Serial.println("");
   delay(100);
   // Initialize sensor
-  if (particleSensor.begin(Wire, I2C_SPEED_FAST) == false) //Use default I2C port, 400kHz speed
+  if (particleSensor.begin(Wire) == false) //Use default I2C port, 400kHz speed
   {
     Serial.println("MAX30105 was not found. Please check wiring/power. ");
     while (1);
