@@ -124,7 +124,6 @@ void loop()
   for(int i=0;i<100;i++)
     {
       while(digitalRead(max30102_int_pin) == 1);
-      delay(1);
       max30102_read_data((r_buffer+i),(ir_buffer+i));
       if(r_buffer[i]>ir_buffer[i] && ir_buffer[i]/r_buffer[i] <= 1 && (r_buffer[i]> 100000 && ir_buffer[i]> 100000)){
         j++;
