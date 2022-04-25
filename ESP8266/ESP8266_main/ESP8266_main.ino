@@ -123,7 +123,7 @@ void loop()
     {
       while(digitalRead(max30102_int_pin) == 1);
       max30102_read_data((r_buffer+i),(ir_buffer+i));
-      if(r_buffer[i]>ir_buffer[i] && ir_buffer[i]/r_buffer[i] <= 1){
+      if(r_buffer[i]>ir_buffer[i] && ir_buffer[i]/r_buffer[i] <= 1 && (r_buffer[i]> 100000 && ir_buffer[i]> 100000)){
         
         Serial.print(r_buffer[i]);
         Serial.print("\t");
