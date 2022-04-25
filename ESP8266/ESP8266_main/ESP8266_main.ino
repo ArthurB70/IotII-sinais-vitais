@@ -100,8 +100,8 @@ void max30102_init(){
 
 uint32_t ir_buffer[100]; 
 uint32_t r_buffer[100];
-//uint32_t r_avg = 0;
-//uint32_t ir_avg = 0;
+uint32_t r_avg;
+uint32_t ir_avg;
 
 const byte max30102_int_pin = 14; // GPIO14/D5
 
@@ -117,20 +117,30 @@ void setup()
 //
 void loop()
 {
- 
-  delay(1000);
+  r_avg = 0;
+  ir_avg = 0;
+  //delay(1000);
+  int j = 0;
   for(int i=0;i<100;i++)
     {
       while(digitalRead(max30102_int_pin) == 1);
-      delay(10);
+      delay(1);
       max30102_read_data((r_buffer+i),(ir_buffer+i));
       if(r_buffer[i]>ir_buffer[i] && ir_buffer[i]/r_buffer[i] <= 1 && (r_buffer[i]> 100000 && ir_buffer[i]> 100000)){
-        
-        Serial.print(r_buffer[i]);
-        Serial.print("\t");
-        Serial.print(ir_buffer[i]);   
-        Serial.println();
+        j++;
       }
+    }
+    for(int i=0;i<100;i++){
+      if(r_buffer[i]>ir_buffer[i] && ir_buffer[i]/r_buffer[i] <= 1 && (r_buffer[i]> 100000 && ir_buffer[i]> 100000)){
+        r_avg += (r_buffer[i]/j);
+        ir_avg += (ir_buffer[i]/j);
+      }
+    }
+    if(r_avg != 0 && ir_avg != 0){
+      Serial.print(r_avg);
+      Serial.print("\t");
+      Serial.print(ir_avg);   
+      Serial.println();
     }
 
 }
