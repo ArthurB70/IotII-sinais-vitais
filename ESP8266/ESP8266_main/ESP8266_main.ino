@@ -1,145 +1,115 @@
 #include <Wire.h>
-
+#include <Arduino.h>
+#include "algorithm_by_RF.h"
+#include "max30102.h"
+#include "algorithm.h"
 
 #define MAX_30102_ADDR 0X57
-
-void init_I2C_protocol(){
-    Wire.begin();
-    Wire.setClock(400000L);
-}
-
-void max30102_write(uint8_t addr, uint8_t data){
-  Wire.beginTransmission(MAX_30102_ADDR); 
-  Wire.write(addr);
-  Wire.write(data);
-  Wire.endTransmission();
-}
-
-uint8_t max30102_read(uint8_t addr){
-  uint8_t data = -1;
-  
-  Wire.beginTransmission(MAX_30102_ADDR); 
-  Wire.write(addr);
-  Wire.endTransmission();
-  
-  Wire.beginTransmission(MAX_30102_ADDR); 
-  Wire.requestFrom(MAX_30102_ADDR, 1);
-  data = Wire.read();
-  Wire.endTransmission();
-
-  return data;
-}
-void max30102_read_data(uint32_t *r_data, uint32_t *ir_data){
-  uint32_t aux_read = 0;
-  *r_data = 0;
-  *ir_data = 0;
-
-  Wire.beginTransmission(MAX_30102_ADDR);
-  Wire.write(0x07); // reg_fifo_data
-  Wire.endTransmission();
-
-  Wire.beginTransmission(MAX_30102_ADDR);
-  Wire.requestFrom(MAX_30102_ADDR,6);
-
-  aux_read = Wire.read();
-  aux_read <<= 16;
-  *r_data += aux_read;
-
-  aux_read = Wire.read();
-  aux_read <<= 8;
-  *r_data += aux_read;
-
-  aux_read = Wire.read();
-  aux_read <<= 8;
-  *r_data += aux_read;
-
-  aux_read = Wire.read();
-  *r_data += aux_read;
-
-  aux_read = 0;
-
-  aux_read = Wire.read();
-  aux_read <<= 16;
-  *ir_data += aux_read;
-
-  aux_read = Wire.read();
-  aux_read <<= 8;
-  *ir_data += aux_read;
-
-  aux_read = Wire.read();
-  aux_read <<= 8;
-  *ir_data += aux_read;
-
-  aux_read = Wire.read();
-  *ir_data += aux_read;
-
-  Wire.endTransmission();
-
-  *ir_data &= 0x03FFFF;
-  *r_data &= 0x03FFFF;
-}
-
-void max30102_init(){
-  Wire.begin();
-  max30102_write(0x09, 0x40);
-  delay(1000);
-  max30102_read(0x00); 
-  
-  max30102_write(0x02,0xc0);
-  max30102_write(0x03,0x00);
-  max30102_write(0x04,0x00);
-  max30102_write(0x05,0x00);
-  max30102_write(0x06,0x00);
-  max30102_write(0x08,0x4f);
-  max30102_write(0x09,0x03);
-  max30102_write(0x0A,0x27);
-  max30102_write(0x0C,0x24);
-  max30102_write(0x0D,0x24);
-  max30102_write(0x10,0x7f);
-}
-
-uint32_t ir_buffer[100]; 
-uint32_t r_buffer[100];
-uint32_t r_avg;
-uint32_t ir_avg;
-
 const byte max30102_int_pin = 14; // GPIO14/D5
+uint32_t elapsedTime,timeStart;
 
-void setup()
+uint32_t aun_ir_buffer[BUFFER_SIZE]; //infrared LED sensor data
+uint32_t aun_red_buffer[BUFFER_SIZE];  //red LED sensor data
+float old_n_spo2;  // Previous SPO2 value
+uint8_t uch_dummy,k;
+
+void millis_to_hours(uint32_t ms, char* hr_str)
 {
-  Serial.begin(115200);
-  pinMode(max30102_int_pin, INPUT);
-  delay(1000);
-  init_I2C_protocol();
-  max30102_init();
-  
+  char istr[6];
+  uint32_t secs,mins,hrs;
+  secs=ms/1000; // time in seconds
+  mins=secs/60; // time in minutes
+  secs-=60*mins; // leftover seconds
+  hrs=mins/60; // time in hours
+  mins-=60*hrs; // leftover minutes
+  itoa(hrs,hr_str,10);
+  strcat(hr_str,":");
+  itoa(mins,istr,10);
+  strcat(hr_str,istr);
+  strcat(hr_str,":");
+  itoa(secs,istr,10);
+  strcat(hr_str,istr);
 }
-//
-void loop()
-{
-  r_avg = 0;
-  ir_avg = 0;
-  //delay(1000);
-  int j = 0;
-  for(int i=0;i<100;i++)
-    {
-      while(digitalRead(max30102_int_pin) == 1);
-      max30102_read_data((r_buffer+i),(ir_buffer+i));
-      if(r_buffer[i]>ir_buffer[i] && ir_buffer[i]/r_buffer[i] <= 1 && (r_buffer[i]> 100000 && ir_buffer[i]> 100000)){
-        j++;
-      }
-    }
-    for(int i=0;i<100;i++){
-      if(r_buffer[i]>ir_buffer[i] && ir_buffer[i]/r_buffer[i] <= 1 && (r_buffer[i]> 100000 && ir_buffer[i]> 100000)){
-        r_avg += (r_buffer[i]/j);
-        ir_avg += (ir_buffer[i]/j);
-      }
-    }
-    if(r_avg != 0 && ir_avg != 0){
-      Serial.print(r_avg);
-      Serial.print("\t");
-      Serial.print(ir_avg);   
-      Serial.println();
-    }
+int cont =0;
+void setup() {
 
+  pinMode(max30102_int_pin, INPUT);  //pin D10 connects to the interrupt output pin of the MAX30102
+  Serial.begin(115200);
+  delay(100);
+  maxim_max30102_init();  //initialize the MAX30102
+  old_n_spo2=0.0;
+  timeStart=millis();
+  Serial.read();
+}
+
+//Continuously taking samples from MAX30102.  Heart rate and SpO2 are calculated every ST seconds
+void loop() {
+  float n_spo2,ratio,correl;  //SPO2 value
+  int8_t ch_spo2_valid;  //indicator to show if the SPO2 calculation is valid
+  int32_t n_heart_rate; //heart rate value
+  int8_t  ch_hr_valid;  //indicator to show if the heart rate calculation is valid
+  int32_t i;
+  char hr_str[10];
+  if(cont <1000){
+    for(i=0;i<BUFFER_SIZE;i++, cont++)
+      {
+      while(digitalRead(max30102_int_pin)==1);  //wait until the interrupt pin asserts
+      maxim_max30102_read_fifo((aun_red_buffer+i), (aun_ir_buffer+i));  //read from MAX30102 FIFO
+  /*
+      Serial.print(i, DEC);
+      Serial.print(F("\t"));
+      Serial.print(aun_red_buffer[i], DEC);
+      Serial.print(F("\t"));
+      Serial.print(aun_ir_buffer[i], DEC);    
+      Serial.println("");*/
+      delay(5);
+      }    
+  }
+//param[in]    *pun_ir_buffer           - IR sensor data buffer
+//param[in]    n_ir_buffer_length      - IR sensor data buffer length
+//param[in]    *pun_red_buffer          - Red sensor data buffer
+//param[out]    *pn_spo2                - Calculated SpO2 value
+//param[out]    *pch_spo2_valid         - 1 if the calculated SpO2 value is valid
+//param[out]    *pn_heart_rate          - Calculated heart rate value
+//param[out]    *pch_hr_valid           - 1 if the calculated heart rate value is valid
+  maxim_heart_rate_and_oxygen_saturation(aun_ir_buffer, BUFFER_SIZE, aun_red_buffer, &n_spo2, &ch_spo2_valid, &n_heart_rate, &ch_hr_valid);
+
+   Serial.println("--RF--");
+  Serial.print(elapsedTime);
+  Serial.print("\t");
+  Serial.print(n_spo2);
+  Serial.print("\t");
+  Serial.print(n_heart_rate, DEC);
+  Serial.println("------");
+  n_spo2 = 0;
+  n_heart_rate= 0;
+  /*
+  //calculate heart rate and SpO2 after BUFFER_SIZE samples (ST seconds of samples) using Robert's method
+  rf_heart_rate_and_oxygen_saturation(aun_ir_buffer, BUFFER_SIZE, aun_red_buffer, &n_spo2, &ch_spo2_valid, &n_heart_rate, &ch_hr_valid, &ratio, &correl); 
+  elapsedTime=millis()-timeStart;
+  millis_to_hours(elapsedTime,hr_str); // Time in hh:mm:ss format
+  elapsedTime/=1000; // Time in seconds
+  // Read the _chip_ temperature in degrees Celsius
+  int8_t integer_temperature;
+  uint8_t fractional_temperature;
+  maxim_max30102_read_temperature(&integer_temperature, &fractional_temperature);
+  float temperature = integer_temperature + ((float)fractional_temperature)/16.0;
+
+  Serial.println("--RF--");
+  Serial.print(elapsedTime);
+  Serial.print("\t");
+  Serial.print(n_spo2);
+  Serial.print("\t");
+  Serial.print(n_heart_rate, DEC);
+  Serial.print("\t");
+  Serial.print(hr_str);
+  Serial.print("\t");
+  Serial.println(temperature);
+  Serial.println("------");
+
+
+  if(ch_hr_valid && ch_spo2_valid) { 
+    old_n_spo2=n_spo2;
+  }
+  */
 }
