@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<meta http-equiv="refresh" content="30" />
+	<title>Painel</title>
+</head>
+<body style="width: 100%; height:100%;">
+	<header>
+		<div style="display: inline-block;">
+			<img id="imagem_coracao" src="./image/coracao.png">
+			<h1 id="lb_titulo">Painel de Sinais Vitáis</h1>
+			<button id="botao" type="button" onclick="window.location.href='index.html'"><span  id="lb_botao">Voltar</span></button>
+		</div>
+	</header>
+	<main>
+		<section id="paineis" >
+				<div id="painel_oxigenacao" style="background-color: lightgreen;">
+					<h1 id="lb_oxigenacao">Oxigenação</h1>
+					<p id="value_oxigenacao">{oxigenacao} %</p>
+				</div>
+				<div id="painel_batimento" style="background-color: lightgoldenrodyellow;">
+					<h1 id="lb_batimento">Batimento cardíaco</h1>
+					<p id="value_batimento">{batimento} /min</p>
+				</div>
+				<div id="painel_temperatura" style="background-color: lightcoral;">
+					<h1 id="lb_temperatura">Temperatura</h1>
+					<p id="value_temperatura">{temperatura} °C</p>
+				</div>
+		</section>
+		<p id="value_leitura">Leitura {leitura}</p>
+	</main>
+	<footer></footer>
+</body>
+<script>
+	var leitura = document.getElementById('value_leitura').textContent;
+	if(leitura == 'Leitura parcial'){
+		console.log(leitura)
+		setTimeout(function(){
+			window.location.reload(1);
+		}, 2000);
+		document.getElementById('botao').style.visibility = "hidden";
+	}
+	else{
+		document.getElementById('botao').style.visibility = "visible";
+		
+	}
+ </script>
+ <style>
+	/* http://meyerweb.com/eric/tools/css/reset/ 
+	v2.0 | 20110126
+	License: none (public domain)
+	*/
+
+	html, body, div, span, applet, object, iframe,
+	h1, h2, h3, h4, h5, h6, p, blockquote, pre,
+	a, abbr, acronym, address, big, cite, code,
+	del, dfn, em, img, ins, kbd, q, s, samp,
+	small, strike, strong, sub, sup, tt, var,
+	b, u, i, center,
+	dl, dt, dd, ol, ul, li,
+	fieldset, form, label, legend,
+	table, caption, tbody, tfoot, thead, tr, th, td,
+	article, aside, canvas, details, embed, 
+	figure, figcaption, footer, header, hgroup, 
+	menu, nav, output, ruby, section, summary,
+	time, mark, audio, video {
+		margin: 0;
+		padding: 0;
+		border: 0;
+		font-size: 100%;
+		font: inherit;
+		vertical-align: baseline;
+	}
+	/* HTML5 display-role reset for older browsers */
+	article, aside, details, figcaption, figure, 
+	footer, header, hgroup, menu, nav, section {
+		display: block;
+	}
+	body {
+		line-height: 1;
+	}
+	ol, ul {
+		list-style: none;
+	}
+	blockquote, q {
+		quotes: none;
+	}
+	blockquote:before, blockquote:after,
+	q:before, q:after {
+		content: '';
+		content: none;
+	}
+	table {
+		border-collapse: collapse;
+		border-spacing: 0;
+	}
+	header{
+		background-color: lightskyblue; width: 100%; height: 12em;bottom: 0;left: 0;
+	}
+	footer{
+		background-color: lightskyblue; width: 100%; height: 12em; margin-top: 100%;position: absolute;bottom: 0;left: 0;
+	}
+	#lb_titulo{
+		float:left; 
+		margin-left: 150px; 
+		margin-top: 80px;
+		font-family: sans-serif; 
+		font-size: 4em;
+		font-weight: bold;
+	}
+	#imagem_coracao{
+		width:300px;
+		height:168px;
+		float:left;
+		margin-left: 30px;
+	}
+	#painel_oxigenacao,#painel_batimento,#painel_temperatura{
+		border:2px solid black;
+		border-radius: 20%;
+		margin-left: 4%;
+		width: 28%;
+		height: 16em;
+		text-align: center;
+		float: left;
+	}
+	#paineis{
+		margin-top: 4%;
+		width: 100%;
+		display: inline-block;
+		position: relative;
+	}
+	#lb_oxigenacao, #lb_batimento, #lb_temperatura{
+		margin-top: 10%;
+		font-family: sans-serif;
+		font-size: 2em;
+		font-weight: lighter;
+	}
+	#value_oxigenacao, #value_batimento, #value_temperatura{
+		margin-top: 10%;
+		font-family: sans-serif;
+		font-size: 4em;
+		font-weight:bolder;
+	}
+	#value_leitura {
+		text-align: center;
+		margin-top: 1.5%;
+		font-family: sans-serif;
+		font-weight: bold;
+		font-size: 1.5em;
+	}
+	#botao{
+		border:2px solid black;
+		margin-top: 3%;
+		margin-left: 18em;
+		border-radius: 30px;
+		background-color: white;
+		
+		height: 3em;
+		width: 10em;
+		padding: 0 5px;
+		text-transform: uppercase;
+		font-weight: bold;
+		cursor: pointer;
+	}
+	#lb_botao{
+		font-size: 1.5em;
+	}
+ </style>
+</html>

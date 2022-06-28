@@ -10,8 +10,8 @@
 #include <CertStoreBearSSL.h>
 #include <SparkFunMLX90614.h>
 
-const char* ssid = "NET VIRTUA 103";
-const char* password = "23342334";
+const char* ssid = "ASUS_Arthur";
+const char* password = "Po#Is5376";
 const char* mqtt_server = "ba87952a69c64e73a1569a69541d7fd6.s1.eu.hivemq.cloud";
 
 BearSSL::CertStore certStore;
@@ -121,9 +121,9 @@ void reconnect() {
     if (client->connect(clientId.c_str(), "iot-vital-signs-user", "#Po23aa.14sz")) {
       Serial.println("connected");
       // Once connected, publish an announcement…
-      client->publish("testTopic", "device: connected");
+      client->publish("sinais_vitais_topic", "device: connected");
       // … and resubscribe
-      client->subscribe("testTopic");
+      client->subscribe("sinais_vitais_topic");
     } else {
       Serial.print("failed, rc = ");
       Serial.print(client->state());
@@ -198,7 +198,12 @@ void loop()
     reconnect();
   }
   else {
-    if(callback_retorno == "teste"){
+    batimentoCardiaco_avg = 0; 
+    oxigenacao_avg = 0; 
+    temp_avg = 0;
+    i_hr = 0, i_spo = 0, i_temp = 0;
+    if(callback_retorno == "usuario: m"){
+      callback_retorno = "";
       batimentoCardiaco_avg = oxigenacao_avg = temp_avg = 0; 
       i_hr = i_spo = i_temp = 0;
       for (byte i = 0 ; i < bufferLength ; i++)
@@ -250,19 +255,17 @@ void loop()
           aux += "device(p): ";
           aux += String(oxigenacao_avg/i_spo);
           aux += ",";
-          aux += String(batimentoCardiaco_avg/i_hr);
+          aux += String((batimentoCardiaco_avg/i_hr)*0.7);
           aux += ",";
           aux += String(temp_avg/i_temp);
           aux.toCharArray(msg, MSG_BUFFER_SIZE);
           //snprintf (msg, MSG_BUFFER_SIZE,retorno, );
           Serial.print("Publish message: ");
           Serial.println(msg);
-          if (!client->connected()) {
-            reconnect();
+          while(!client->connected()){
+          reconnect();
           }
-          else{
-            client->publish("testTopic", msg);
-          }
+          client->publish("sinais_vitais_topic", msg);
         }
       }
         String aux = "";
@@ -270,24 +273,26 @@ void loop()
         aux += "device(f): ";
         aux += String(oxigenacao_avg/i_spo);
         aux += ",";
-        aux += String(batimentoCardiaco_avg/i_hr);
+        aux += String((batimentoCardiaco_avg/i_hr)*0.7);
         aux += ",";
         aux += String(temp_avg/i_temp);
         //snprintf (msg, MSG_BUFFER_SIZE, "%s", retorno);
         aux.toCharArray(msg, MSG_BUFFER_SIZE);
         Serial.print("Publish message: ");
         Serial.println(msg);
-        if (!client->connected()) {
-            reconnect();
+        while(!client->connected()){
+          reconnect();
           }
-          else{
-            client->publish("testTopic", msg);
-        }
+          client->publish("sinais_vitais_topic", msg);
+        
         Serial.print(F("M->oxigenacao="));
         Serial.println(oxigenacao_avg/i_spo);
       
         Serial.print(F("M->hr="));
-        Serial.println(batimentoCardiaco_avg/i_hr);
+        Serial.println((batimentoCardiaco_avg/i_hr)*0.7);
+
+        Serial.print(F("M->temperatura="));
+        Serial.println(temp_avg/i_temp);
     
     }
     else {
